@@ -1,9 +1,13 @@
+--===== CONFIGURATION =====--
 local CurrentVersion = "1.0.1"
 local VersionURL     = "https://raw.githubusercontent.com/barryjensen/saturnhub/refs/heads/main/version.txt"
 
+--===== SERVICES =====--
 local TeleportService = game:GetService("TeleportService")
 local Players         = game:GetService("Players")
 local HttpService     = game:GetService("HttpService")
+
+--===== GAME/SCRIPT DATA =====--
 local supportedGames = {
     {
         ID = 3823781113,
@@ -29,6 +33,7 @@ local supportedGames = {
     }
 }
 
+--===== UTILITY FUNCTIONS =====--
 local function rejoin()
     TeleportService:Teleport(game.PlaceId, Players.LocalPlayer)
 end
@@ -72,6 +77,7 @@ local function smallServer()
     end
 end
 
+--===== VERSION CHECKER =====--
 local function checkForUpdates()
     local ok, res = pcall(function()
         return game:HttpGet(VersionURL)
@@ -85,10 +91,13 @@ local function checkForUpdates()
     return false, nil
 end
 
+--===== LOAD LUNA UI =====--
 local Luna = loadstring(game:HttpGet(
     "https://raw.githubusercontent.com/Nebula-Softworks/Luna-Interface-Suite/refs/heads/main/source.lua",
     true
 ))()
+
+--===== CREATE MAIN WINDOW =====--
 local Window = Luna:CreateWindow({
     Name            = "Saturn Hub",
     Subtitle        = "v" .. CurrentVersion,
@@ -96,29 +105,26 @@ local Window = Luna:CreateWindow({
     LoadingEnabled  = true,
     LoadingTitle    = "Saturn Hub",
     LoadingSubtitle = "by coolio",
-    KeySystem       = false
+    KeySystem       = false  -- supports all executors
 })
 
 Window:CreateHomeTab({
-    SupportedExecutors = {},
+    SupportedExecutors = {},  -- allow any
     DiscordInvite     = "TyevewM7Jc",
     Icon              = 1
 })
 
+--===== INITIAL UPDATE CHECK =====--
 task.defer(function()
     local available, latest = checkForUpdates()
     if available then
-        Window:CreateNotification({
-            Title       = "Update Available!",
-            Content     = "v" .. latest .. " is out now. Download at GitHub.",
-            Duration    = 10,
-            Icon        = "update",
-            ImageSource = "Material"
-        })
+        warn(("Saturn Hub: update available! v%s (you have v%s)"):format(latest, CurrentVersion))
     end
 end)
 
+--===== BUILD TABS =====--
 local function runDetectedGame()
+    -- Detect game
     local currentGame
     for _, g in ipairs(supportedGames) do
         if g.ID == game.PlaceId then
@@ -128,6 +134,7 @@ local function runDetectedGame()
     end
 
     if not currentGame then
+        -- Universal fallback tab
         local ut = Window:CreateTab({
             Name        = "Universal",
             Icon        = "view_in_ar",
@@ -167,27 +174,16 @@ local function runDetectedGame()
         ut:CreateButton({ Name = "Serverhop", Callback = serverhop })
         ut:CreateButton({ Name = "Small Server", Callback = smallServer })
 
+        -- Update-check button
         ut:CreateDivider()
         ut:CreateButton({
             Name = "Check for Updates",
             Callback = function()
                 local available, latest = checkForUpdates()
                 if available then
-                    Window:CreateNotification({
-                        Title       = "Update Available!",
-                        Content     = "v" .. latest .. " is out now.",
-                        Duration    = 8,
-                        Icon        = "update",
-                        ImageSource = "Material"
-                    })
+                    warn(("Saturn Hub: update available! v%s (you have v%s)"):format(latest, CurrentVersion))
                 else
-                    Window:CreateNotification({
-                        Title       = "Up to Date",
-                        Content     = "You’re on v" .. CurrentVersion,
-                        Duration    = 5,
-                        Icon        = "check_circle",
-                        ImageSource = "Material"
-                    })
+                    warn(("Saturn Hub: you’re up to date (v%s)"):format(CurrentVersion))
                 end
             end
         })
@@ -195,6 +191,7 @@ local function runDetectedGame()
         return
     end
 
+    -- Scripts tab for the detected game
     local tab = Window:CreateTab({
         Name        = "Scripts",
         Icon        = "view_in_ar",
@@ -206,6 +203,7 @@ local function runDetectedGame()
     for _, info in ipairs(currentGame.Scripts) do
         local scriptName = info.Name
         local scriptURL  = info.URL
+
         tab:CreateButton({
             Name     = scriptName,
             Callback = function()
@@ -237,27 +235,16 @@ local function runDetectedGame()
     tab:CreateButton({ Name = "Serverhop", Callback = serverhop })
     tab:CreateButton({ Name = "Small Server", Callback = smallServer })
 
+    -- Update-check button
     tab:CreateDivider()
     tab:CreateButton({
         Name = "Check for Updates",
         Callback = function()
             local available, latest = checkForUpdates()
             if available then
-                Window:CreateNotification({
-                    Title       = "Update Available!",
-                    Content     = "v" .. latest .. " is out now.",
-                    Duration    = 8,
-                    Icon        = "update",
-                    ImageSource = "Material"
-                })
+                warn(("Saturn Hub: update available! v%s (you have v%s)"):format(latest, CurrentVersion))
             else
-                Window:CreateNotification({
-                    Title       = "Up to Date",
-                    Content     = "You’re on v" .. CurrentVersion,
-                    Duration    = 5,
-                    Icon        = "check_circle",
-                    ImageSource = "Material"
-                })
+                warn(("Saturn Hub: you’re up to date (v%s)"):format(CurrentVersion))
             end
         end
     })
