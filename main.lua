@@ -94,7 +94,6 @@ local function promptReload(title, text)
         Button1  = "Reload",
         Button2  = "Later",
         Callback = function()
-            -- destroy current UI and re-run the hub loader
             Luna:Destroy()
             loadstring(game:HttpGet(HubURL, true))()
         end
@@ -113,7 +112,6 @@ local function serverhop()
                 :format(game.PlaceId)
             return HttpService:JSONDecode(game:HttpGet(url))
         end)
-
         if ok and result and type(result.data) == "table" then
             for _, srv in ipairs(result.data) do
                 if srv.playing < srv.maxPlayers and srv.id ~= currentJobId then
@@ -138,7 +136,7 @@ local function smallServer()
     end
 end
 
---===== VERSION CHECKER =======
+--===== VERSION CHECKER =====--
 local function checkForUpdates()
     local ok, res = pcall(function()
         return game:HttpGet(VersionURL, true)
@@ -161,7 +159,7 @@ local Luna = loadstring(game:HttpGet(
 --===== CREATE MAIN WINDOW =======
 local Window = Luna:CreateWindow({
     Name            = "Saturn Hub",
-    Subtitle        = "" .. CurrentVersion,
+    Subtitle        = "v" .. CurrentVersion,
     LogoID          = "7251671408",
     LoadingEnabled  = true,
     LoadingTitle    = "Saturn Hub",
@@ -203,7 +201,39 @@ local function runDetectedGame()
             ImageSource = "Material",
             ShowTitle   = true
         })
-        -- (Universal tab buttons — unchanged) …
+
+        ut:CreateSection("Admin")
+        ut:CreateButton({ Name = "Infinite Yield", Callback = function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source", true))()
+        end })
+        ut:CreateButton({ Name = "Nameless Admin", Callback = function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/ltseverydayyou/Nameless-Admin/main/Source.lua", true))()
+        end })
+        ut:CreateButton({ Name = "AK Admin", Callback = function()
+            loadstring(game:HttpGet("https://angelical.me/ak.lua", true))()
+        end })
+
+        ut:CreateDivider()
+        ut:CreateSection("FE")
+        ut:CreateButton({ Name = "Stalkie", Callback = function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/0riginalWarrior/Stalkie/refs/heads/main/roblox.lua", true))()
+        end })
+
+        ut:CreateDivider()
+        ut:CreateSection("Script Hubs")
+        ut:CreateButton({ Name = "Speed Hub X", Callback = function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/AhmadV99/Speed-Hub-X/main/Speed%20Hub%20X.lua", true))()
+        end })
+        ut:CreateButton({ Name = "Forge Hub", Callback = function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/Skzuppy/forge-hub/main/loader.lua", true))()
+        end })
+
+        ut:CreateDivider()
+        ut:CreateSection("Utilities")
+        ut:CreateButton({ Name = "Rejoin",       Callback = rejoin })
+        ut:CreateButton({ Name = "Serverhop",    Callback = serverhop })
+        ut:CreateButton({ Name = "Small Server", Callback = smallServer })
+
         ut:CreateDivider()
         ut:CreateButton({
             Name = "Check for Updates",
@@ -212,13 +242,14 @@ local function runDetectedGame()
                 if available then
                     promptReload(
                         "Saturn Hub",
-                        "Update available!" .. latest .. " (you have" .. CurrentVersion .. ")"
+                        "Update available! v" .. latest .. " (you have v" .. CurrentVersion .. ")"
                     )
                 else
                     notify("Saturn Hub", "You’re up to date (v" .. CurrentVersion .. ")", 5)
                 end
             end
         })
+
         return
     end
 
@@ -259,6 +290,7 @@ local function runDetectedGame()
     tab:CreateButton({ Name = "Rejoin",       Callback = rejoin })
     tab:CreateButton({ Name = "Serverhop",    Callback = serverhop })
     tab:CreateButton({ Name = "Small Server", Callback = smallServer })
+
     tab:CreateDivider()
     tab:CreateButton({
         Name = "Check for Updates",
