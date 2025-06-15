@@ -2,7 +2,7 @@ local TeleportService = game:GetService("TeleportService")
 local Players         = game:GetService("Players")
 local HttpService     = game:GetService("HttpService")
 
--- Flattened list of supported games (no categories)
+-- Flattened list of supported games
 local supportedGames = {
     { 
         ID = 3823781113,
@@ -28,7 +28,7 @@ local supportedGames = {
     }
 }
 
--- Utility functions
+-- Rejoin/serverhop utilities
 local function rejoin()
     TeleportService:Teleport(game.PlaceId, Players.LocalPlayer)
 end
@@ -69,7 +69,7 @@ local Luna = loadstring(game:HttpGet(
     true
 ))()
 
--- Create main window (no executor whitelist => supports all)
+-- Create main window
 local Window = Luna:CreateWindow({
     Name            = "Saturn Hub",
     Subtitle        = "v1.0",
@@ -77,17 +77,16 @@ local Window = Luna:CreateWindow({
     LoadingEnabled  = true,
     LoadingTitle    = "Saturn Hub",
     LoadingSubtitle = "by coolio",
-    KeySystem       = false  -- no key checking
+    KeySystem       = false   -- allows all executors
 })
 
--- Home tab (optional)
 Window:CreateHomeTab({
-    SupportedExecutors = {},  -- empty = allow any
+    SupportedExecutors = {},   -- empty = any
     DiscordInvite     = "TyevewM7Jc",
     Icon              = 1
 })
 
--- Universal fallback for unknown games
+-- Fallback for unsupported places
 local function runUniversalFallback()
     local ut = Window:CreateTab({
         Name        = "Universal",
@@ -97,62 +96,58 @@ local function runUniversalFallback()
     })
 
     ut:CreateSection("Admin")
-    ut:CreateButton({
-        Name     = "Infinite Yield",
-        Callback = function()
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source", true))()
-        end
-    })
-    ut:CreateButton({
-        Name     = "Nameless Admin",
-        Callback = function()
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/ltseverydayyou/Nameless-Admin/main/Source.lua", true))()
-        end
-    })
-    ut:CreateButton({
-        Name     = "AK Admin",
-        Callback = function()
-            loadstring(game:HttpGet("https://angelical.me/ak.lua", true))()
-        end
-    })
+    ut:CreateButton({ Name = "Infinite Yield", Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source", true))()
+    end })
+    ut:CreateButton({ Name = "Nameless Admin", Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/ltseverydayyou/Nameless-Admin/main/Source.lua", true))()
+    end })
+    ut:CreateButton({ Name = "AK Admin", Callback = function()
+        loadstring(game:HttpGet("https://angelical.me/ak.lua", true))()
+    end })
 
     ut:CreateDivider()
     ut:CreateSection("FE")
-    ut:CreateButton({
-        Name     = "Stalkie",
-        Callback = function()
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/0riginalWarrior/Stalkie/refs/heads/main/roblox.lua", true))()
-        end
-    })
+    ut:CreateButton({ Name = "Stalkie", Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/0riginalWarrior/Stalkie/refs/heads/main/roblox.lua", true))()
+    end })
 
     ut:CreateDivider()
     ut:CreateSection("Script Hubs")
-    ut:CreateButton({
-        Name     = "Speed Hub X",
-        Callback = function()
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/AhmadV99/Speed-Hub-X/main/Speed%20Hub%20X.lua", true))()
-        end
-    })
-    ut:CreateButton({
-        Name     = "Forge Hub",
-        Callback = function()
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/Skzuppy/forge-hub/main/loader.lua", true))()
-        end
-    })
+    ut:CreateButton({ Name = "Speed Hub X", Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/AhmadV99/Speed-Hub-X/main/Speed%20Hub%20X.lua", true))()
+    end })
+    ut:CreateButton({ Name = "Forge Hub", Callback = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/Skzuppy/forge-hub/main/loader.lua", true))()
+    end })
 
     ut:CreateDivider()
     ut:CreateSection("Server Utilities")
-    ut:CreateButton({ Name = "Rejoin",      Callback = rejoin })
-    ut:CreateButton({ Name = "Serverhop",   Callback = serverhop })
+    ut:CreateButton({ Name = "Rejoin", Callback = rejoin })
+    ut:CreateButton({ Name = "Serverhop", Callback = serverhop })
     ut:CreateButton({ Name = "Small Server", Callback = smallServer })
 end
 
--- Build the single “Scripts” tab
+-- Single “Scripts” tab logic using string-based dropdowns
 local function runDetectedGame()
     local placeId = game.PlaceId
     local found   = false
 
-    -- Create one tab for all supported games
+    -- Build names list and detect current place
+    local gameNames = {}
+    for _, g in ipairs(supportedGames) do
+        table.insert(gameNames, g.Name)
+        if g.ID == placeId then
+            found = true
+        end
+    end
+
+    -- If this place isn’t supported, fallback
+    if not found then
+        return runUniversalFallback()
+    end
+
+    -- Create “Scripts” tab
     local tab = Window:CreateTab({
         Name        = "Scripts",
         Icon        = "view_in_ar",
@@ -160,56 +155,59 @@ local function runDetectedGame()
         ShowTitle   = true
     })
 
-    local scriptDropdown
+    local scriptLabelOrDropdown
 
-    -- Game selector
-    tab:CreateDropdownAdvanced({
+    -- Game selector (string list)
+    tab:CreateDropdown({
         Name    = "Select Game",
-        Options = (function()
-            local opts = {}
+        Options = gameNames,
+        Callback = function(selectedName)
+            -- Clear previous script UI
+            if scriptLabelOrDropdown and scriptLabelOrDropdown.Destroy then
+                scriptLabelOrDropdown:Destroy()
+            end
+
+            -- Find the chosen game object
+            local gameInfo
             for _, g in ipairs(supportedGames) do
-                table.insert(opts, { Name = g.Name, Value = g })
-                if g.ID == placeId then
-                    found = true
+                if g.Name == selectedName then
+                    gameInfo = g
+                    break
                 end
             end
-            return opts
-        end)(),
-        Callback = function(choice)
-            local gameInfo = choice.Value
-
-            -- clear previous script list
-            if scriptDropdown and scriptDropdown.Destroy then
-                scriptDropdown:Destroy()
+            if not gameInfo then
+                scriptLabelOrDropdown = tab:CreateLabel("Error: game not found.")
+                return
             end
 
-            -- build new script options
-            local scriptOpts = {}
+            -- Build script-name list
+            local scriptNames = {}
             for _, s in ipairs(gameInfo.Scripts) do
-                if s.URL and #s.URL > 0 then
-                    table.insert(scriptOpts, { Name = s.Name, Value = s.URL })
+                if type(s.Name) == "string" and type(s.URL) == "string" and #s.URL > 0 then
+                    table.insert(scriptNames, s.Name)
                 end
             end
 
-            if #scriptOpts == 0 then
-                scriptDropdown = tab:CreateLabel("No scripts available for “" .. gameInfo.Name .. "”.")
+            if #scriptNames == 0 then
+                scriptLabelOrDropdown = tab:CreateLabel("No scripts available for “" .. selectedName .. "”.")
             else
-                scriptDropdown = tab:CreateDropdownAdvanced({
+                scriptLabelOrDropdown = tab:CreateDropdown({
                     Name    = "Select Script",
-                    Options = scriptOpts,
-                    Callback = function(sel)
-                        loadstring(game:HttpGet(sel.Value, true))()
+                    Options = scriptNames,
+                    Callback = function(scriptName)
+                        -- find URL
+                        for _, s in ipairs(gameInfo.Scripts) do
+                            if s.Name == scriptName then
+                                loadstring(game:HttpGet(s.URL, true))()
+                                return
+                            end
+                        end
                     end
                 })
             end
         end
     })
-
-    if not found then
-        -- current place not in supportedGames
-        runUniversalFallback()
-    end
 end
 
--- Kick everything off
+-- Defer startup
 task.defer(runDetectedGame)
