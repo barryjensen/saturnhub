@@ -6,6 +6,7 @@ local VersionURL     = "https://raw.githubusercontent.com/barryjensen/saturnhub/
 local TeleportService = game:GetService("TeleportService")
 local Players         = game:GetService("Players")
 local HttpService     = game:GetService("HttpService")
+local StarterGui      = game:GetService("StarterGui")
 
 --===== GAME/SCRIPT DATA =====--
 local supportedGames = {
@@ -63,17 +64,35 @@ local supportedGames = {
 }
 
 --===== UTILITY FUNCTIONS =====--
+local function notify(title, text, duration)
+    StarterGui:SetCore("SendNotification", {
+        Title    = title,
+        Text     = text,
+        Duration = duration or 5
+    })
+end
+
+local function promptReload(title, text)
+    StarterGui:SetCore("SendNotification", {
+        Title    = title,
+        Text     = text,
+        Duration = 10,
+        Button1  = "Reload",
+        Button2  = "Later",
+        Callback = function()
+            -- only runs if “Reload” is clicked
+            TeleportService:Teleport(game.PlaceId, Players.LocalPlayer)
+        end
+    })
+end
+
 local function rejoin()
     TeleportService:Teleport(game.PlaceId, Players.LocalPlayer)
 end
 
 local function serverhop()
     local currentJobId = game.JobId
-    local maxAttempts  = 50
-    local attempts     = 0
-
-    while attempts < maxAttempts do
-        attempts += 1
+    while true do
         local ok, result = pcall(function()
             local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100")
                 :format(game.PlaceId)
@@ -90,8 +109,6 @@ local function serverhop()
         end
         task.wait(1)
     end
-
-    warn("Saturn Hub: serverhop()—no non-full server found after " .. maxAttempts .. " attempts.")
 end
 
 local function smallServer()
@@ -143,11 +160,14 @@ Window:CreateHomeTab({
     Icon              = 1
 })
 
---===== INITIAL UPDATE CHECK =====--
+--===== INITIAL UPDATE CHECK (deferred) =====--
 task.defer(function()
     local available, latest = checkForUpdates()
     if available then
-        warn(("Saturn Hub: update available! v%s (you have v%s)"):format(latest, CurrentVersion))
+        promptReload(
+            "Saturn Hub",
+            "Update available! v" .. latest .. " (you have v" .. CurrentVersion .. ")"
+        )
     end
 end)
 
@@ -199,9 +219,9 @@ local function runDetectedGame()
 
         ut:CreateDivider()
         ut:CreateSection("Utilities")
-        ut:CreateButton({ Name = "Rejoin",         Callback = rejoin })
-        ut:CreateButton({ Name = "Serverhop",      Callback = serverhop })
-        ut:CreateButton({ Name = "Small Server",   Callback = smallServer })
+        ut:CreateButton({ Name = "Rejoin",       Callback = rejoin })
+        ut:CreateButton({ Name = "Serverhop",    Callback = serverhop })
+        ut:CreateButton({ Name = "Small Server", Callback = smallServer })
 
         -- Update-check button
         ut:CreateDivider()
@@ -210,9 +230,12 @@ local function runDetectedGame()
             Callback = function()
                 local available, latest = checkForUpdates()
                 if available then
-                    warn(("Saturn Hub: update available! v%s (you have v%s)"):format(latest, CurrentVersion))
+                    promptReload(
+                        "Saturn Hub",
+                        "Update available! v" .. latest .. " (you have v" .. CurrentVersion .. ")"
+                    )
                 else
-                    warn(("Saturn Hub: you’re up to date (v%s)"):format(CurrentVersion))
+                    notify("Saturn Hub", "You’re up to date (v" .. CurrentVersion .. ")", 5)
                 end
             end
         })
@@ -230,29 +253,26 @@ local function runDetectedGame()
 
     tab:CreateSection(currentGame.Name)
     for _, info in ipairs(currentGame.Scripts) do
-        local scriptName = info.Name
-        local scriptURL  = info.URL
-
         tab:CreateButton({
-            Name     = scriptName,
+            Name = info.Name,
             Callback = function()
                 local okFetch, res = pcall(function()
-                    return game:HttpGet(scriptURL, true)
+                    return game:HttpGet(info.URL, true)
                 end)
                 if not (okFetch and type(res) == "string") then
-                    warn(("Saturn Hub: HTTP error loading %q: %s"):format(scriptName, tostring(res)))
+                    notify("Saturn Hub", "Failed to load " .. info.Name, 4)
                     return
                 end
 
                 local okLoad, fnOrErr = pcall(loadstring, res)
                 if not (okLoad and type(fnOrErr) == "function") then
-                    warn(("Saturn Hub: compile error in %q: %s"):format(scriptName, tostring(fnOrErr)))
+                    notify("Saturn Hub", "Compile error in " .. info.Name, 4)
                     return
                 end
 
                 local okRun, runErr = pcall(fnOrErr)
                 if not okRun then
-                    warn(("Saturn Hub: runtime error in %q: %s"):format(scriptName, tostring(runErr)))
+                    notify("Saturn Hub", "Runtime error in " .. info.Name, 4)
                 end
             end
         })
@@ -271,9 +291,12 @@ local function runDetectedGame()
         Callback = function()
             local available, latest = checkForUpdates()
             if available then
-                warn(("Saturn Hub: update available! v%s (you have v%s)"):format(latest, CurrentVersion))
+                promptReload(
+                    "Saturn Hub",
+                    "Update available! v" .. latest .. " (you have v" .. CurrentVersion .. ")"
+                )
             else
-                warn(("Saturn Hub: you’re up to date (v%s)"):format(CurrentVersion))
+                notify("Saturn Hub", "You’re up to date (v" .. CurrentVersion .. ")", 5)
             end
         end
     })
