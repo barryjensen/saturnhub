@@ -1,5 +1,5 @@
 --===== CONFIGURATION =====--
-local CurrentVersion = "1.0.0"
+local CurrentVersion = "1.0.1"
 local VersionURL     = "https://raw.githubusercontent.com/barryjensen/saturnhub/refs/heads/main/version.txt"
 
 --===== SERVICES =====--
