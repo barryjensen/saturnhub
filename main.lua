@@ -14,7 +14,8 @@ local supportedGames = {
         Name = "Saber Simulator",
         Scripts = {
             { Name = "Revamp OP Gui", URL = "https://rawscripts.net/raw/Saber-Simulator-REVAMP-Op-Gui-41756" },
-            { Name = "NS Hub",        URL = "https://rawscripts.net/raw/Saber-Simulator-SUMMER-SUMMER-EVENT-AUTO-FARM-AUTO-BUY-AUTO-BOSS-41970" }
+            { Name = "NS Hub",        URL = "https://rawscripts.net/raw/Saber-Simulator-SUMMER-SUMMER-EVENT-AUTO-FARM-AUTO-BUY-AUTO-BOSS-41970" },
+            { Name = "Script 3",      URL = "https://raw.githubusercontent.com/WheatDevelopment/roblox-scripts/main/SaberSim.lua" }
         }
     },
     {
