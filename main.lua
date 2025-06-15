@@ -1,5 +1,5 @@
 --===== CONFIGURATION =====--
-local CurrentVersion = "1.0.1"
+local CurrentVersion = "1.0.0"
 local VersionURL     = "https://raw.githubusercontent.com/barryjensen/saturnhub/refs/heads/main/version.txt"
 
 --===== SERVICES =====--
@@ -64,11 +64,9 @@ local supportedGames = {
 }
 
 --===== UTILITY FUNCTIONS =====--
--- Embedded console logger (writes to UI and to warn())
+-- Embedded console logger (writes to UI & Studio warn)
 local function consoleLog(msg)
-    -- Warn in output
     warn("[SaturnHub] " .. msg)
-    -- Append to UI
     if _G.ConsoleScroll and _G.ConsoleLayout then
         local lbl = Instance.new("TextLabel")
         lbl.BackgroundTransparency = 1
@@ -79,7 +77,6 @@ local function consoleLog(msg)
         lbl.TextColor3         = Color3.new(1, 1, 1)
         lbl.Text               = msg
         lbl.Parent             = _G.ConsoleScroll
-        -- update scroll canvas
         _G.ConsoleScroll.CanvasSize = UDim2.new(0, 0, 0, _G.ConsoleLayout.AbsoluteContentSize.Y)
     end
 end
@@ -122,7 +119,6 @@ local function serverhop()
                 :format(game.PlaceId)
             return HttpService:JSONDecode(game:HttpGet(url))
         end)
-
         if ok and result and type(result.data) == "table" then
             for _, srv in ipairs(result.data) do
                 if srv.playing < srv.maxPlayers and srv.id ~= currentJobId then
@@ -140,15 +136,15 @@ end
 
 local function smallServer()
     consoleLog("Looking for smallest server.")
-    local ok, result = pcall(function()
+    local ok, data = pcall(function()
         local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100")
             :format(game.PlaceId)
         return HttpService:JSONDecode(game:HttpGet(url)).data
     end)
-    if ok and type(result) == "table" and #result > 0 then
-        table.sort(result, function(a, b) return a.playing < b.playing end)
-        consoleLog(("Teleporting to smallest server %s (%d/%d)"):format(result[1].id, result[1].playing, result[1].maxPlayers))
-        TeleportService:TeleportToPlaceInstance(game.PlaceId, result[1].id, Players.LocalPlayer)
+    if ok and type(data) == "table" and #data > 0 then
+        table.sort(data, function(a,b) return a.playing < b.playing end)
+        consoleLog(("Teleporting to smallest server %s (%d/%d)"):format(data[1].id, data[1].playing, data[1].maxPlayers))
+        TeleportService:TeleportToPlaceInstance(game.PlaceId, data[1].id, Players.LocalPlayer)
     else
         consoleLog("Failed to fetch smallest server.")
     end
@@ -156,9 +152,7 @@ end
 
 --===== VERSION CHECKER =====--
 local function checkForUpdates()
-    local ok, res = pcall(function()
-        return game:HttpGet(VersionURL)
-    end)
+    local ok, res = pcall(function() return game:HttpGet(VersionURL) end)
     if ok and type(res) == "string" then
         local latest = res:match("%S+")
         if latest and latest ~= CurrentVersion then
@@ -193,39 +187,6 @@ Window:CreateHomeTab({
     Icon              = 1
 })
 
---===== EMBEDDED CONSOLE TAB =====--
-local ConsoleTab = Window:CreateTab({
-    Name        = "Console",
-    Icon        = "terminal",
-    ImageSource = "Material",
-    ShowTitle   = true
-})
-ConsoleTab:CreateSection("Saturn Hub Console")
-
--- Frame & ScrollingFrame setup
-local consoleFrame = Instance.new("Frame")
-consoleFrame.BackgroundTransparency = 1
-consoleFrame.Size = UDim2.new(1, -20, 1, -30)
-consoleFrame.Position = UDim2.new(0, 10, 0, 20)
-consoleFrame.Parent = ConsoleTab.Container
-
-local scroll = Instance.new("ScrollingFrame")
-scroll.Name = "ConsoleScroll"
-scroll.BackgroundTransparency = 1
-scroll.Size = UDim2.new(1, 0, 1, 0)
-scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-scroll.VerticalScrollBarInset = Enum.ScrollBarInset.Always
-scroll.Parent = consoleFrame
-
-local layout = Instance.new("UIListLayout")
-layout.Parent = scroll
-layout.SortOrder = Enum.SortOrder.LayoutOrder
-layout.Padding = UDim.new(0, 2)
-
--- Expose for consoleLog
-_G.ConsoleScroll = scroll
-_G.ConsoleLayout = layout
-
 --===== INITIAL UPDATE CHECK (deferred) =====--
 task.defer(function()
     local available, latest = checkForUpdates()
@@ -239,6 +200,7 @@ end)
 
 --===== BUILD TABS =====--
 local function runDetectedGame()
+    -- Detect game
     local currentGame
     for _, g in ipairs(supportedGames) do
         if g.ID == game.PlaceId then
@@ -248,6 +210,7 @@ local function runDetectedGame()
     end
 
     if not currentGame then
+        -- Universal fallback tab
         local ut = Window:CreateTab({
             Name        = "Universal",
             Icon        = "view_in_ar",
@@ -255,6 +218,33 @@ local function runDetectedGame()
             ShowTitle   = true
         })
 
+        -- Console UI inside Universal
+        ut:CreateSection("Console")
+        do
+            local consoleFrame = Instance.new("Frame")
+            consoleFrame.BackgroundTransparency = 1
+            consoleFrame.Size     = UDim2.new(1, -20, 1, -60)
+            consoleFrame.Position = UDim2.new(0, 10, 0, 40)
+            consoleFrame.Parent   = ut.Container
+
+            local scroll = Instance.new("ScrollingFrame")
+            scroll.Name                   = "ConsoleScroll"
+            scroll.BackgroundTransparency = 1
+            scroll.Size                   = UDim2.new(1, 0, 1, 0)
+            scroll.CanvasSize             = UDim2.new(0, 0, 0, 0)
+            scroll.VerticalScrollBarInset = Enum.ScrollBarInset.Always
+            scroll.Parent                 = consoleFrame
+
+            local layout = Instance.new("UIListLayout")
+            layout.Parent = scroll
+            layout.SortOrder = Enum.SortOrder.LayoutOrder
+            layout.Padding   = UDim.new(0, 2)
+
+            _G.ConsoleScroll = scroll
+            _G.ConsoleLayout = layout
+        end
+
+        -- Admin section
         ut:CreateSection("Admin")
         ut:CreateButton({ Name = "Infinite Yield", Callback = function()
             consoleLog("Executing Infinite Yield")
@@ -312,7 +302,7 @@ local function runDetectedGame()
         return
     end
 
-    -- Scripts tab
+    -- Scripts tab if game-specific
     local tab = Window:CreateTab({
         Name        = "Scripts",
         Icon        = "view_in_ar",
@@ -323,7 +313,7 @@ local function runDetectedGame()
     tab:CreateSection(currentGame.Name)
     for _, info in ipairs(currentGame.Scripts) do
         tab:CreateButton({
-            Name     = info.Name,
+            Name = info.Name,
             Callback = function()
                 consoleLog("Loading script: " .. info.Name)
                 local okFetch, res = pcall(function()
