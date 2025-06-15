@@ -64,7 +64,7 @@ local supportedGames = {
         ID = 13506552738,
         Name = "Every Second You Get +1 Sword",
         Scripts = {
-            { Name = "Tween", URL = "https://pastebin.com/raw/pGn0rBV8" }
+            { Name = "Tween", URL = "https://pastebin.com/raw/pMCVjBsz" }
         }
     }
 }
