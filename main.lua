@@ -213,6 +213,3 @@ end
 
 -- Kick everything off
 task.defer(runDetectedGame)
-
--- Required per Luna docs
-Luna:LoadAutoloadConfig()
