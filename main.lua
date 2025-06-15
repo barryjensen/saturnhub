@@ -3,7 +3,7 @@ local supportedGames = {
         ID = 3823781113,
         Name = "Saber Simulator",
         Scripts = {
-            { Name = "Script 1", URL = "https://rawscripts.net/raw/Saber-Simulator-REVAMP-Op-Gui-41756" },
+            { Name = "Revamp OP Gui", URL = "https://rawscripts.net/raw/Saber-Simulator-REVAMP-Op-Gui-41756" },
             { Name = "NS Hub", URL = "https://rawscripts.net/raw/Saber-Simulator-SUMMER-SUMMER-EVENT-AUTO-FARM-AUTO-BUY-AUTO-BOSS-41970" }
         }
     },
