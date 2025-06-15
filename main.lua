@@ -64,7 +64,28 @@ local supportedGames = {
 }
 
 --===== UTILITY FUNCTIONS =====--
+-- Embedded console logger (writes to UI and to warn())
+local function consoleLog(msg)
+    -- Warn in output
+    warn("[SaturnHub] " .. msg)
+    -- Append to UI
+    if _G.ConsoleScroll and _G.ConsoleLayout then
+        local lbl = Instance.new("TextLabel")
+        lbl.BackgroundTransparency = 1
+        lbl.Size                = UDim2.new(1, 0, 0, 18)
+        lbl.TextXAlignment      = Enum.TextXAlignment.Left
+        lbl.Font               = Enum.Font.Code
+        lbl.TextSize           = 16
+        lbl.TextColor3         = Color3.new(1, 1, 1)
+        lbl.Text               = msg
+        lbl.Parent             = _G.ConsoleScroll
+        -- update scroll canvas
+        _G.ConsoleScroll.CanvasSize = UDim2.new(0, 0, 0, _G.ConsoleLayout.AbsoluteContentSize.Y)
+    end
+end
+
 local function notify(title, text, duration)
+    consoleLog(("Notify: %s – %s"):format(title, text))
     StarterGui:SetCore("SendNotification", {
         Title    = title,
         Text     = text,
@@ -73,6 +94,7 @@ local function notify(title, text, duration)
 end
 
 local function promptReload(title, text)
+    consoleLog(("PromptReload: %s – %s"):format(title, text))
     StarterGui:SetCore("SendNotification", {
         Title    = title,
         Text     = text,
@@ -80,17 +102,19 @@ local function promptReload(title, text)
         Button1  = "Reload",
         Button2  = "Later",
         Callback = function()
-            -- only runs if “Reload” is clicked
+            consoleLog("User clicked Reload → teleporting to reload Hub.")
             TeleportService:Teleport(game.PlaceId, Players.LocalPlayer)
         end
     })
 end
 
 local function rejoin()
+    consoleLog("Rejoining current server.")
     TeleportService:Teleport(game.PlaceId, Players.LocalPlayer)
 end
 
 local function serverhop()
+    consoleLog("Starting serverhop loop.")
     local currentJobId = game.JobId
     while true do
         local ok, result = pcall(function()
@@ -102,16 +126,20 @@ local function serverhop()
         if ok and result and type(result.data) == "table" then
             for _, srv in ipairs(result.data) do
                 if srv.playing < srv.maxPlayers and srv.id ~= currentJobId then
+                    consoleLog(("Teleporting to server %s (%d/%d)"):format(srv.id, srv.playing, srv.maxPlayers))
                     TeleportService:TeleportToPlaceInstance(game.PlaceId, srv.id, Players.LocalPlayer)
                     return
                 end
             end
+        else
+            consoleLog("Error fetching server list.")
         end
         task.wait(1)
     end
 end
 
 local function smallServer()
+    consoleLog("Looking for smallest server.")
     local ok, result = pcall(function()
         local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100")
             :format(game.PlaceId)
@@ -119,7 +147,10 @@ local function smallServer()
     end)
     if ok and type(result) == "table" and #result > 0 then
         table.sort(result, function(a, b) return a.playing < b.playing end)
+        consoleLog(("Teleporting to smallest server %s (%d/%d)"):format(result[1].id, result[1].playing, result[1].maxPlayers))
         TeleportService:TeleportToPlaceInstance(game.PlaceId, result[1].id, Players.LocalPlayer)
+    else
+        consoleLog("Failed to fetch smallest server.")
     end
 end
 
@@ -131,9 +162,11 @@ local function checkForUpdates()
     if ok and type(res) == "string" then
         local latest = res:match("%S+")
         if latest and latest ~= CurrentVersion then
+            consoleLog("Update found: v" .. latest .. " (you have v" .. CurrentVersion .. ")")
             return true, latest
         end
     end
+    consoleLog("No update available (v" .. CurrentVersion .. ").")
     return false, nil
 end
 
@@ -151,14 +184,47 @@ local Window = Luna:CreateWindow({
     LoadingEnabled  = true,
     LoadingTitle    = "Saturn Hub",
     LoadingSubtitle = "by coolio",
-    KeySystem       = false  -- supports all executors
+    KeySystem       = false
 })
 
 Window:CreateHomeTab({
-    SupportedExecutors = {},  -- allow any
+    SupportedExecutors = {},
     DiscordInvite     = "TyevewM7Jc",
     Icon              = 1
 })
+
+--===== EMBEDDED CONSOLE TAB =====--
+local ConsoleTab = Window:CreateTab({
+    Name        = "Console",
+    Icon        = "terminal",
+    ImageSource = "Material",
+    ShowTitle   = true
+})
+ConsoleTab:CreateSection("Saturn Hub Console")
+
+-- Frame & ScrollingFrame setup
+local consoleFrame = Instance.new("Frame")
+consoleFrame.BackgroundTransparency = 1
+consoleFrame.Size = UDim2.new(1, -20, 1, -30)
+consoleFrame.Position = UDim2.new(0, 10, 0, 20)
+consoleFrame.Parent = ConsoleTab.Container
+
+local scroll = Instance.new("ScrollingFrame")
+scroll.Name = "ConsoleScroll"
+scroll.BackgroundTransparency = 1
+scroll.Size = UDim2.new(1, 0, 1, 0)
+scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+scroll.VerticalScrollBarInset = Enum.ScrollBarInset.Always
+scroll.Parent = consoleFrame
+
+local layout = Instance.new("UIListLayout")
+layout.Parent = scroll
+layout.SortOrder = Enum.SortOrder.LayoutOrder
+layout.Padding = UDim.new(0, 2)
+
+-- Expose for consoleLog
+_G.ConsoleScroll = scroll
+_G.ConsoleLayout = layout
 
 --===== INITIAL UPDATE CHECK (deferred) =====--
 task.defer(function()
@@ -173,7 +239,6 @@ end)
 
 --===== BUILD TABS =====--
 local function runDetectedGame()
-    -- Detect game
     local currentGame
     for _, g in ipairs(supportedGames) do
         if g.ID == game.PlaceId then
@@ -183,7 +248,6 @@ local function runDetectedGame()
     end
 
     if not currentGame then
-        -- Universal fallback tab
         local ut = Window:CreateTab({
             Name        = "Universal",
             Icon        = "view_in_ar",
@@ -193,27 +257,33 @@ local function runDetectedGame()
 
         ut:CreateSection("Admin")
         ut:CreateButton({ Name = "Infinite Yield", Callback = function()
+            consoleLog("Executing Infinite Yield")
             loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source", true))()
         end })
         ut:CreateButton({ Name = "Nameless Admin", Callback = function()
+            consoleLog("Executing Nameless Admin")
             loadstring(game:HttpGet("https://raw.githubusercontent.com/ltseverydayyou/Nameless-Admin/main/Source.lua", true))()
         end })
         ut:CreateButton({ Name = "AK Admin", Callback = function()
+            consoleLog("Executing AK Admin")
             loadstring(game:HttpGet("https://angelical.me/ak.lua", true))()
         end })
 
         ut:CreateDivider()
         ut:CreateSection("FE")
         ut:CreateButton({ Name = "Stalkie", Callback = function()
+            consoleLog("Executing Stalkie")
             loadstring(game:HttpGet("https://raw.githubusercontent.com/0riginalWarrior/Stalkie/refs/heads/main/roblox.lua", true))()
         end })
 
         ut:CreateDivider()
         ut:CreateSection("Script Hubs")
         ut:CreateButton({ Name = "Speed Hub X", Callback = function()
+            consoleLog("Executing Speed Hub X")
             loadstring(game:HttpGet("https://raw.githubusercontent.com/AhmadV99/Speed-Hub-X/main/Speed%20Hub%20X.lua", true))()
         end })
         ut:CreateButton({ Name = "Forge Hub", Callback = function()
+            consoleLog("Executing Forge Hub")
             loadstring(game:HttpGet("https://raw.githubusercontent.com/Skzuppy/forge-hub/main/loader.lua", true))()
         end })
 
@@ -223,7 +293,6 @@ local function runDetectedGame()
         ut:CreateButton({ Name = "Serverhop",    Callback = serverhop })
         ut:CreateButton({ Name = "Small Server", Callback = smallServer })
 
-        -- Update-check button
         ut:CreateDivider()
         ut:CreateButton({
             Name = "Check for Updates",
@@ -243,7 +312,7 @@ local function runDetectedGame()
         return
     end
 
-    -- Scripts tab for the detected game
+    -- Scripts tab
     local tab = Window:CreateTab({
         Name        = "Scripts",
         Icon        = "view_in_ar",
@@ -254,8 +323,9 @@ local function runDetectedGame()
     tab:CreateSection(currentGame.Name)
     for _, info in ipairs(currentGame.Scripts) do
         tab:CreateButton({
-            Name = info.Name,
+            Name     = info.Name,
             Callback = function()
+                consoleLog("Loading script: " .. info.Name)
                 local okFetch, res = pcall(function()
                     return game:HttpGet(info.URL, true)
                 end)
@@ -284,7 +354,6 @@ local function runDetectedGame()
     tab:CreateButton({ Name = "Serverhop",    Callback = serverhop })
     tab:CreateButton({ Name = "Small Server", Callback = smallServer })
 
-    -- Update-check button
     tab:CreateDivider()
     tab:CreateButton({
         Name = "Check for Updates",
