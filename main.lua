@@ -39,6 +39,27 @@ local supportedGames = {
             { Name = "Speed Hub X",   URL = "https://raw.githubusercontent.com/AhmadV99/Speed-Hub-X/main/Speed%20Hub%20X.lua" },
             { Name = "Enchanted Hub", URL = "https://raw.githubusercontent.com/iblameaabis/Enchanted/refs/heads/main/Enchanted%20Hub%20On%20Top" }
         }
+    },
+    {
+        ID = 6403373529,
+        Name = "Slap Battles",
+        Scripts = {
+            { Name = "", URL = "" }
+        }
+    },
+    {
+        ID = 2753915549,
+        Name = "Blox Fruits",
+        Scripts = {
+            { Name = "Redz Hub", URL = "https://raw.githubusercontent.com/newredz/BloxFruits/refs/heads/main/Source.luau" }
+        }
+    },
+    {
+        ID = 10449761463,
+        Name = "The Strongest Battlegrounds",
+        Scripts = {
+            { Name = "Arc", URL = "https://raw.githubusercontent.com/Mikasuru/Arc/refs/heads/main/Arc.lua" }
+        }
     }
 }
 
