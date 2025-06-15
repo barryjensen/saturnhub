@@ -1,30 +1,24 @@
-local supportedGameGroups = {
-    Simulators = {
-        { 
-            ID = 3823781113,
-            Name = "Saber Simulator",
-            Scripts = {
-                { Name = "Script 1", URL = "https://rawscripts.net/raw/Saber-Simulator-REVAMP-Op-Gui-41756" },
-                { Name = "Script 2", URL = "" },
-                { Name = "Script 3", URL = "" },
-                { Name = "Script 4", URL = "" },
-                { Name = "Script 5", URL = "" }
-            }
-        },
-        { 
-            ID = 126884695634066,
-            Name = "Grow a Garden",
-            Scripts = {
-                { Name = "Script 1", URL = "https://raw.githubusercontent.com/AhmadV99/Speed-Hub-X/main/Speed%20Hub%20X.lua" },
-                { Name = "Script 2", URL = "" }
-            }
-        },
-        {
-            ID = 13127800756,
-            Name = "Arm Wrestle Simulator",
-            Scripts = {
-                { Name = "Script 1", URL = "" }
-            }
+local supportedGames = {
+    { 
+        ID = 3823781113,
+        Name = "Saber Simulator",
+        Scripts = {
+            { Name = "Script 1", URL = "https://rawscripts.net/raw/Saber-Simulator-REVAMP-Op-Gui-41756" },
+            { Name = "NS Hub", URL = "https://rawscripts.net/raw/Saber-Simulator-SUMMER-SUMMER-EVENT-AUTO-FARM-AUTO-BUY-AUTO-BOSS-41970" }
+        }
+    },
+    { 
+        ID = 126884695634066,
+        Name = "Grow a Garden",
+        Scripts = {
+            { Name = "Speed Hub X", URL = "https://raw.githubusercontent.com/AhmadV99/Speed-Hub-X/main/Speed%20Hub%20X.lua" }
+        }
+    },
+    {
+        ID = 13127800756,
+        Name = "Arm Wrestle Simulator",
+        Scripts = {
+            { Name = "LDS Hub", URL = "https://api.luarmor.net/files/v3/loaders/49f02b0d8c1f60207c84ae76e12abc1e.lua" }
         }
     }
 }
@@ -126,60 +120,58 @@ local function runDetectedGame()
     local gameId = game.PlaceId
     local currentGameFound = false
 
-    for categoryName, games in pairs(supportedGameGroups) do
-        local tab = Window:CreateTab({
-            Name = categoryName,
-            Icon = "view_in_ar",
-            ImageSource = "Material",
-            ShowTitle = true
-        })
+    local tab = Window:CreateTab({
+        Name = "Games",
+        Icon = "view_in_ar",
+        ImageSource = "Material",
+        ShowTitle = true
+    })
 
-        local gameOptions = {}
-        local gameMap = {}
-        for _, game in ipairs(games) do
-            table.insert(gameOptions, game.Name)
-            gameMap[game.Name] = game
-        end
+    local gameOptions = {}
+    local gameMap = {}
+    for _, game in ipairs(supportedGames) do
+        table.insert(gameOptions, game.Name)
+        gameMap[game.Name] = game
+    end
 
-        local scriptDropdown = nil
+    local scriptDropdown = nil
 
-        tab:CreateDropdown({
-            Name = "Select Game",
-            Options = gameOptions,
-            Callback = function(gameName)
-                local selectedGame = gameMap[gameName]
-                if selectedGame then
-                    if scriptDropdown then scriptDropdown:Destroy() end
-                    local scriptOptions = {}
-                    local scriptMap = {}
-                    for _, script in ipairs(selectedGame.Scripts) do
-                        if script.URL and script.URL ~= "" then
-                            table.insert(scriptOptions, script.Name)
-                            scriptMap[script.Name] = script.URL
-                        end
-                    end
-                    if #scriptOptions == 0 then
-                        scriptDropdown = tab:CreateLabel("No scripts available for this game.")
-                    else
-                        scriptDropdown = tab:CreateDropdown({
-                            Name = "Select Script",
-                            Options = scriptOptions,
-                            Callback = function(scriptName)
-                                local url = scriptMap[scriptName]
-                                if url then
-                                    loadstring(game:HttpGet(url, true))()
-                                end
-                            end
-                        })
+    tab:CreateDropdown({
+        Name = "Select Game",
+        Options = gameOptions,
+        Callback = function(gameName)
+            local selectedGame = gameMap[gameName]
+            if selectedGame then
+                if scriptDropdown then scriptDropdown:Destroy() end
+                local scriptOptions = {}
+                local scriptMap = {}
+                for _, script in ipairs(selectedGame.Scripts) do
+                    if script.URL and script.URL ~= "" then
+                        table.insert(scriptOptions, script.Name)
+                        scriptMap[script.Name] = script.URL
                     end
                 end
+                if #scriptOptions == 0 then
+                    scriptDropdown = tab:CreateLabel("No scripts available for this game.")
+                else
+                    scriptDropdown = tab:CreateDropdown({
+                        Name = "Select Script",
+                        Options = scriptOptions,
+                        Callback = function(scriptName)
+                            local url = scriptMap[scriptName]
+                            if url then
+                                loadstring(game:HttpGet(url, true))()
+                            end
+                        end
+                    })
+                end
             end
-        })
+        end
+    })
 
-        for _, game in ipairs(games) do
-            if game.ID == gameId then
-                currentGameFound = true
-            end
+    for _, game in ipairs(supportedGames) do
+        if game.ID == gameId then
+            currentGameFound = true
         end
     end
 
