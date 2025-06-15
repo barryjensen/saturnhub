@@ -31,6 +31,14 @@ local supportedGames = {
         Scripts = {
             { Name = "NDS Hub", URL = "https://api.luarmor.net/files/v3/loaders/49f02b0d8c1f60207c84ae76e12abc1e.lua" }
         }
+    },
+    {
+        ID = 3623096087,
+        Name = "Muscle Legends",
+        Scripts = {
+            { Name = "Speed Hub X",   URL = "https://raw.githubusercontent.com/AhmadV99/Speed-Hub-X/main/Speed%20Hub%20X.lua" },
+            { Name = "Enchanted Hub", URL = "https://raw.githubusercontent.com/iblameaabis/Enchanted/refs/heads/main/Enchanted%20Hub%20On%20Top" }
+        }
     }
 }
 
