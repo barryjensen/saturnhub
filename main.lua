@@ -1,14 +1,16 @@
-local TeleportService = game:GetService("TeleportService")
-local Players = game:GetService("Players")
-local HttpService = game:GetService("HttpService")
+local CurrentVersion = "1.0.1"
+local VersionURL     = "https://raw.githubusercontent.com/barryjensen/saturnhub/refs/heads/main/version.txt"
 
+local TeleportService = game:GetService("TeleportService")
+local Players         = game:GetService("Players")
+local HttpService     = game:GetService("HttpService")
 local supportedGames = {
     {
         ID = 3823781113,
         Name = "Saber Simulator",
         Scripts = {
             { Name = "Revamp OP Gui", URL = "https://rawscripts.net/raw/Saber-Simulator-REVAMP-Op-Gui-41756" },
-            { Name = "NS Hub", URL = "https://rawscripts.net/raw/Saber-Simulator-SUMMER-SUMMER-EVENT-AUTO-FARM-AUTO-BUY-AUTO-BOSS-41970" }
+            { Name = "NS Hub",        URL = "https://rawscripts.net/raw/Saber-Simulator-SUMMER-SUMMER-EVENT-AUTO-FARM-AUTO-BUY-AUTO-BOSS-41970" }
         }
     },
     {
@@ -33,47 +35,63 @@ end
 
 local function serverhop()
     local currentJobId = game.JobId
-    local maxAttempts = 50
-    local attempts = 0
+    local maxAttempts  = 50
+    local attempts     = 0
 
     while attempts < maxAttempts do
         attempts += 1
-        local success, result = pcall(function()
-            local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(game.PlaceId)
+        local ok, result = pcall(function()
+            local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100")
+                :format(game.PlaceId)
             return HttpService:JSONDecode(game:HttpGet(url))
         end)
 
-        if success and result and result.data then
-            for _, server in ipairs(result.data) do
-                if server.playing < server.maxPlayers and server.id ~= currentJobId then
-                    TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id, Players.LocalPlayer)
+        if ok and result and type(result.data) == "table" then
+            for _, srv in ipairs(result.data) do
+                if srv.playing < srv.maxPlayers and srv.id ~= currentJobId then
+                    TeleportService:TeleportToPlaceInstance(game.PlaceId, srv.id, Players.LocalPlayer)
                     return
                 end
             end
         end
-
         task.wait(1)
     end
 
-    warn("Serverhop failed: No non-full server found after multiple attempts.")
+    warn("Saturn Hub: serverhop()—no non-full server found after " .. maxAttempts .. " attempts.")
 end
 
 local function smallServer()
-    local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(game.PlaceId)
-    local ok, data = pcall(function()
+    local ok, result = pcall(function()
+        local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100")
+            :format(game.PlaceId)
         return HttpService:JSONDecode(game:HttpGet(url)).data
     end)
-    if ok and data and #data > 0 then
-        table.sort(data, function(a, b) return a.playing < b.playing end)
-        TeleportService:TeleportToPlaceInstance(game.PlaceId, data[1].id, Players.LocalPlayer)
+    if ok and type(result) == "table" and #result > 0 then
+        table.sort(result, function(a, b) return a.playing < b.playing end)
+        TeleportService:TeleportToPlaceInstance(game.PlaceId, result[1].id, Players.LocalPlayer)
     end
 end
 
-local Luna = loadstring(game:HttpGet("https://raw.githubusercontent.com/Nebula-Softworks/Luna-Interface-Suite/refs/heads/main/source.lua", true))()
+local function checkForUpdates()
+    local ok, res = pcall(function()
+        return game:HttpGet(VersionURL)
+    end)
+    if ok and type(res) == "string" then
+        local latest = res:match("%S+")
+        if latest and latest ~= CurrentVersion then
+            return true, latest
+        end
+    end
+    return false, nil
+end
 
+local Luna = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/Nebula-Softworks/Luna-Interface-Suite/refs/heads/main/source.lua",
+    true
+))()
 local Window = Luna:CreateWindow({
     Name            = "Saturn Hub",
-    Subtitle        = "v1.0.1",
+    Subtitle        = "v" .. CurrentVersion,
     LogoID          = "7251671408",
     LoadingEnabled  = true,
     LoadingTitle    = "Saturn Hub",
@@ -82,61 +100,167 @@ local Window = Luna:CreateWindow({
 })
 
 Window:CreateHomeTab({
-    SupportedExecutors = {"All"},
-    DiscordInvite = "TyevewM7Jc",
-    Icon = 1
+    SupportedExecutors = {},
+    DiscordInvite     = "TyevewM7Jc",
+    Icon              = 1
 })
 
-local function runDetectedGame()
-    local tab = Window:CreateTab({
-        Name = "Scripts",
-        Icon = "view_in_ar",
-        ImageSource = "Material",
-        ShowTitle = true
-    })
+task.defer(function()
+    local available, latest = checkForUpdates()
+    if available then
+        Window:CreateNotification({
+            Title       = "Update Available!",
+            Content     = "v" .. latest .. " is out now. Download at GitHub.",
+            Duration    = 10,
+            Icon        = "update",
+            ImageSource = "Material"
+        })
+    end
+end)
 
-    local foundGame
-    for _, gameEntry in ipairs(supportedGames) do
-        if game.PlaceId == gameEntry.ID then
-            foundGame = gameEntry
+local function runDetectedGame()
+    local currentGame
+    for _, g in ipairs(supportedGames) do
+        if g.ID == game.PlaceId then
+            currentGame = g
             break
         end
     end
 
-    local scriptOptions = {}
+    if not currentGame then
+        local ut = Window:CreateTab({
+            Name        = "Universal",
+            Icon        = "view_in_ar",
+            ImageSource = "Material",
+            ShowTitle   = true
+        })
 
-    if foundGame then
-        for _, s in ipairs(foundGame.Scripts) do
-            table.insert(scriptOptions, {
-                Name = s.Name,
-                Value = s.URL
-            })
-        end
+        ut:CreateSection("Admin")
+        ut:CreateButton({ Name = "Infinite Yield", Callback = function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source", true))()
+        end })
+        ut:CreateButton({ Name = "Nameless Admin", Callback = function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/ltseverydayyou/Nameless-Admin/main/Source.lua", true))()
+        end })
+        ut:CreateButton({ Name = "AK Admin", Callback = function()
+            loadstring(game:HttpGet("https://angelical.me/ak.lua", true))()
+        end })
 
-        tab:CreateDropdown({
-            Name = "Select Script",
-            Options = scriptOptions,
-            Callback = function(sel)
-                if sel and sel.Value then
-                    local success, err = pcall(function()
-                        loadstring(game:HttpGet(sel.Value, true))()
-                    end)
-                    if not success then
-                        warn("Script Load Error: " .. tostring(err))
-                    end
+        ut:CreateDivider()
+        ut:CreateSection("FE")
+        ut:CreateButton({ Name = "Stalkie", Callback = function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/0riginalWarrior/Stalkie/refs/heads/main/roblox.lua", true))()
+        end })
+
+        ut:CreateDivider()
+        ut:CreateSection("Script Hubs")
+        ut:CreateButton({ Name = "Speed Hub X", Callback = function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/AhmadV99/Speed-Hub-X/main/Speed%20Hub%20X.lua", true))()
+        end })
+        ut:CreateButton({ Name = "Forge Hub", Callback = function()
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/Skzuppy/forge-hub/main/loader.lua", true))()
+        end })
+
+        ut:CreateDivider()
+        ut:CreateSection("Utilities")
+        ut:CreateButton({ Name = "Rejoin",    Callback = rejoin })
+        ut:CreateButton({ Name = "Serverhop", Callback = serverhop })
+        ut:CreateButton({ Name = "Small Server", Callback = smallServer })
+
+        ut:CreateDivider()
+        ut:CreateButton({
+            Name = "Check for Updates",
+            Callback = function()
+                local available, latest = checkForUpdates()
+                if available then
+                    Window:CreateNotification({
+                        Title       = "Update Available!",
+                        Content     = "v" .. latest .. " is out now.",
+                        Duration    = 8,
+                        Icon        = "update",
+                        ImageSource = "Material"
+                    })
+                else
+                    Window:CreateNotification({
+                        Title       = "Up to Date",
+                        Content     = "You’re on v" .. CurrentVersion,
+                        Duration    = 5,
+                        Icon        = "check_circle",
+                        ImageSource = "Material"
+                    })
                 end
             end
         })
-    else
-        tab:CreateLabel("No scripts available for this game.")
+
+        return
+    end
+
+    local tab = Window:CreateTab({
+        Name        = "Scripts",
+        Icon        = "view_in_ar",
+        ImageSource = "Material",
+        ShowTitle   = true
+    })
+
+    tab:CreateSection(currentGame.Name)
+    for _, info in ipairs(currentGame.Scripts) do
+        local scriptName = info.Name
+        local scriptURL  = info.URL
+        tab:CreateButton({
+            Name     = scriptName,
+            Callback = function()
+                local okFetch, res = pcall(function()
+                    return game:HttpGet(scriptURL, true)
+                end)
+                if not (okFetch and type(res) == "string") then
+                    warn(("Saturn Hub: HTTP error loading %q: %s"):format(scriptName, tostring(res)))
+                    return
+                end
+
+                local okLoad, fnOrErr = pcall(loadstring, res)
+                if not (okLoad and type(fnOrErr) == "function") then
+                    warn(("Saturn Hub: compile error in %q: %s"):format(scriptName, tostring(fnOrErr)))
+                    return
+                end
+
+                local okRun, runErr = pcall(fnOrErr)
+                if not okRun then
+                    warn(("Saturn Hub: runtime error in %q: %s"):format(scriptName, tostring(runErr)))
+                end
+            end
+        })
     end
 
     tab:CreateDivider()
     tab:CreateSection("Utilities")
+    tab:CreateButton({ Name = "Rejoin",    Callback = rejoin })
+    tab:CreateButton({ Name = "Serverhop", Callback = serverhop })
+    tab:CreateButton({ Name = "Small Server", Callback = smallServer })
 
-    tab:CreateButton({ Name = "Rejoin", Callback = rejoin })
-    tab:CreateButton({ Name = "Serverhop (Smart)", Callback = serverhop })
-    tab:CreateButton({ Name = "Join Smallest Server", Callback = smallServer })
+    tab:CreateDivider()
+    tab:CreateButton({
+        Name = "Check for Updates",
+        Callback = function()
+            local available, latest = checkForUpdates()
+            if available then
+                Window:CreateNotification({
+                    Title       = "Update Available!",
+                    Content     = "v" .. latest .. " is out now.",
+                    Duration    = 8,
+                    Icon        = "update",
+                    ImageSource = "Material"
+                })
+            else
+                Window:CreateNotification({
+                    Title       = "Up to Date",
+                    Content     = "You’re on v" .. CurrentVersion,
+                    Duration    = 5,
+                    Icon        = "check_circle",
+                    ImageSource = "Material"
+                })
+            end
+        end
+    })
 end
 
 task.defer(runDetectedGame)
