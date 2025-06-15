@@ -28,7 +28,7 @@ local supportedGames = {
     }
 }
 
--- Rejoin/serverhop utilities
+-- Utility functions
 local function rejoin()
     TeleportService:Teleport(game.PlaceId, Players.LocalPlayer)
 end
@@ -63,13 +63,13 @@ local function smallServer()
     TeleportService:TeleportToPlaceInstance(game.PlaceId, data[1].id, Players.LocalPlayer)
 end
 
--- Load Luna Interface
+-- Load Luna Interface Suite
 local Luna = loadstring(game:HttpGet(
     "https://raw.githubusercontent.com/Nebula-Softworks/Luna-Interface-Suite/refs/heads/main/source.lua",
     true
 ))()
 
--- Create main window
+-- Create main window (no executor whitelist)
 local Window = Luna:CreateWindow({
     Name            = "Saturn Hub",
     Subtitle        = "v1.0",
@@ -77,16 +77,17 @@ local Window = Luna:CreateWindow({
     LoadingEnabled  = true,
     LoadingTitle    = "Saturn Hub",
     LoadingSubtitle = "by coolio",
-    KeySystem       = false   -- allows all executors
+    KeySystem       = false
 })
 
+-- Home tab (allows any executor)
 Window:CreateHomeTab({
-    SupportedExecutors = {},   -- empty = any
+    SupportedExecutors = {},
     DiscordInvite     = "TyevewM7Jc",
     Icon              = 1
 })
 
--- Fallback for unsupported places
+-- Universal fallback tools
 local function runUniversalFallback()
     local ut = Window:CreateTab({
         Name        = "Universal",
@@ -123,91 +124,73 @@ local function runUniversalFallback()
 
     ut:CreateDivider()
     ut:CreateSection("Server Utilities")
-    ut:CreateButton({ Name = "Rejoin", Callback = rejoin })
-    ut:CreateButton({ Name = "Serverhop", Callback = serverhop })
+    ut:CreateButton({ Name = "Rejoin",      Callback = rejoin })
+    ut:CreateButton({ Name = "Serverhop",   Callback = serverhop })
     ut:CreateButton({ Name = "Small Server", Callback = smallServer })
 end
 
--- Single “Scripts” tab logic using string-based dropdowns
+-- Build single “Scripts” tab with safe closures
 local function runDetectedGame()
     local placeId = game.PlaceId
-    local found   = false
+    local currentGame
 
-    -- Build names list and detect current place
-    local gameNames = {}
     for _, g in ipairs(supportedGames) do
-        table.insert(gameNames, g.Name)
         if g.ID == placeId then
-            found = true
+            currentGame = g
+            break
         end
     end
 
-    -- If this place isn’t supported, fallback
-    if not found then
+    if not currentGame then
         return runUniversalFallback()
     end
 
-    -- Create “Scripts” tab
-    local tab = Window:CreateTab({
+    local scriptsTab = Window:CreateTab({
         Name        = "Scripts",
         Icon        = "view_in_ar",
         ImageSource = "Material",
         ShowTitle   = true
     })
 
-    local scriptLabelOrDropdown
+    scriptsTab:CreateSection(currentGame.Name)
+    for _, scriptInfo in ipairs(currentGame.Scripts) do
+        -- capture each scriptInfo into its own local
+        local info = scriptInfo
 
-    -- Game selector (string list)
-    tab:CreateDropdown({
-        Name    = "Select Game",
-        Options = gameNames,
-        Callback = function(selectedName)
-            -- Clear previous script UI
-            if scriptLabelOrDropdown and scriptLabelOrDropdown.Destroy then
-                scriptLabelOrDropdown:Destroy()
-            end
+        scriptsTab:CreateButton({
+            Name = info.Name,
+            Callback = function()
+                -- fetch the code
+                local okFetch, res = pcall(function()
+                    return game:HttpGet(info.URL, true)
+                end)
+                if not okFetch or type(res) ~= "string" then
+                    warn(("Saturn Hub: failed HTTP fetch for %q: %s"):format(info.Name, tostring(res)))
+                    return
+                end
 
-            -- Find the chosen game object
-            local gameInfo
-            for _, g in ipairs(supportedGames) do
-                if g.Name == selectedName then
-                    gameInfo = g
-                    break
+                -- compile the code
+                local okCompile, fnOrErr = pcall(loadstring, res)
+                if not okCompile or type(fnOrErr) ~= "function" then
+                    warn(("Saturn Hub: failed to compile %q: %s"):format(info.Name, tostring(fnOrErr)))
+                    return
+                end
+
+                -- run the compiled function
+                local okRun, runErr = pcall(fnOrErr)
+                if not okRun then
+                    warn(("Saturn Hub: error running %q: %s"):format(info.Name, tostring(runErr)))
                 end
             end
-            if not gameInfo then
-                scriptLabelOrDropdown = tab:CreateLabel("Error: game not found.")
-                return
-            end
+        })
+    end
 
-            -- Build script-name list
-            local scriptNames = {}
-            for _, s in ipairs(gameInfo.Scripts) do
-                if type(s.Name) == "string" and type(s.URL) == "string" and #s.URL > 0 then
-                    table.insert(scriptNames, s.Name)
-                end
-            end
-
-            if #scriptNames == 0 then
-                scriptLabelOrDropdown = tab:CreateLabel("No scripts available for “" .. selectedName .. "”.")
-            else
-                scriptLabelOrDropdown = tab:CreateDropdown({
-                    Name    = "Select Script",
-                    Options = scriptNames,
-                    Callback = function(scriptName)
-                        -- find URL
-                        for _, s in ipairs(gameInfo.Scripts) do
-                            if s.Name == scriptName then
-                                loadstring(game:HttpGet(s.URL, true))()
-                                return
-                            end
-                        end
-                    end
-                })
-            end
-        end
-    })
+    scriptsTab:CreateDivider()
+    scriptsTab:CreateSection("Server Utilities")
+    scriptsTab:CreateButton({ Name = "Rejoin",      Callback = rejoin })
+    scriptsTab:CreateButton({ Name = "Serverhop",   Callback = serverhop })
+    scriptsTab:CreateButton({ Name = "Small Server", Callback = smallServer })
 end
 
--- Defer startup
+-- Start it up
 task.defer(runDetectedGame)
