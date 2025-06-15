@@ -43,7 +43,7 @@ local supportedGames = {
         ID = 6403373529,
         Name = "Slap Battles",
         Scripts = {
-            { Name = "", URL = "" }
+            { Name = "Forge Hub", URL = "https://raw.githubusercontent.com/Skzuppy/forge-hub/main/loader.lua" }
         }
     },
     {
@@ -57,7 +57,7 @@ local supportedGames = {
         ID = 10449761463,
         Name = "The Strongest Battlegrounds",
         Scripts = {
-            { Name = "Arc", URL = "https://raw.githubusercontent.com/Mikasuru/Arc/refs/heads/main/Arc.lua" }
+            { Name = "Kukuri Client", URL = "https://raw.githubusercontent.com/Mikasuru/Arc/refs/heads/main/Arc.lua" }
         }
     }
 }
