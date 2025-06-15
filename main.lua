@@ -1,5 +1,5 @@
 --===== CONFIGURATION =====--
-local CurrentVersion = "1.0.1"
+local CurrentVersion = "1.0.0"
 local VersionURL     = "https://raw.githubusercontent.com/barryjensen/saturnhub/refs/heads/main/version.txt"
 
 --===== SERVICES =====--
@@ -170,9 +170,9 @@ local function runDetectedGame()
 
         ut:CreateDivider()
         ut:CreateSection("Utilities")
-        ut:CreateButton({ Name = "Rejoin",    Callback = rejoin })
-        ut:CreateButton({ Name = "Serverhop", Callback = serverhop })
-        ut:CreateButton({ Name = "Small Server", Callback = smallServer })
+        ut:CreateButton({ Name = "Rejoin",         Callback = rejoin })
+        ut:CreateButton({ Name = "Serverhop",      Callback = serverhop })
+        ut:CreateButton({ Name = "Small Server",   Callback = smallServer })
 
         -- Update-check button
         ut:CreateDivider()
@@ -231,8 +231,8 @@ local function runDetectedGame()
 
     tab:CreateDivider()
     tab:CreateSection("Utilities")
-    tab:CreateButton({ Name = "Rejoin",    Callback = rejoin })
-    tab:CreateButton({ Name = "Serverhop", Callback = serverhop })
+    tab:CreateButton({ Name = "Rejoin",       Callback = rejoin })
+    tab:CreateButton({ Name = "Serverhop",    Callback = serverhop })
     tab:CreateButton({ Name = "Small Server", Callback = smallServer })
 
     -- Update-check button
