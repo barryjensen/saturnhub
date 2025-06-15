@@ -59,6 +59,13 @@ local supportedGames = {
         Scripts = {
             { Name = "Kukuri Client", URL = "https://raw.githubusercontent.com/Mikasuru/Arc/refs/heads/main/Arc.lua" }
         }
+    },
+    {
+        ID = 13506552738,
+        Name = "Every Second You Get +1 Sword",
+        Scripts = {
+            { Name = "Tween", URL = "https://pastebin.com/raw/pGn0rBV8" }
+        }
     }
 }
 
