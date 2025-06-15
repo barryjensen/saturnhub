@@ -2,7 +2,6 @@ local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 
--- Supported games and scripts
 local supportedGames = {
     {
         ID = 3823781113,
@@ -28,12 +27,10 @@ local supportedGames = {
     }
 }
 
--- Utility: Rejoin current server
 local function rejoin()
     TeleportService:Teleport(game.PlaceId, Players.LocalPlayer)
 end
 
--- Utility: Serverhop until it finds a non-full, different server
 local function serverhop()
     local currentJobId = game.JobId
     local maxAttempts = 50
@@ -61,7 +58,6 @@ local function serverhop()
     warn("Serverhop failed: No non-full server found after multiple attempts.")
 end
 
--- Utility: Join smallest server
 local function smallServer()
     local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(game.PlaceId)
     local ok, data = pcall(function()
@@ -73,13 +69,11 @@ local function smallServer()
     end
 end
 
--- Load Luna UI
 local Luna = loadstring(game:HttpGet("https://raw.githubusercontent.com/Nebula-Softworks/Luna-Interface-Suite/refs/heads/main/source.lua", true))()
 
--- Create Window
 local Window = Luna:CreateWindow({
     Name            = "Saturn Hub",
-    Subtitle        = "v1.0",
+    Subtitle        = "v1.0.1",
     LogoID          = "7251671408",
     LoadingEnabled  = true,
     LoadingTitle    = "Saturn Hub",
@@ -93,7 +87,6 @@ Window:CreateHomeTab({
     Icon = 1
 })
 
--- Detect current game and show script list
 local function runDetectedGame()
     local tab = Window:CreateTab({
         Name = "Scripts",
